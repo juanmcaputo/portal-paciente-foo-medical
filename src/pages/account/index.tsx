@@ -10,8 +10,9 @@ const sideMenu = {
   title: 'Account',
   menu: [
     { name: 'Profile', href: '/account/profile' },
-    { name: 'Provider', href: '/account/provider' },
-    { name: 'Membership & Billing', href: '/account/membership-and-billing' },
+    // MiniPACS (etapa 1): en la cuenta solo queda el perfil (en solo lectura)
+    // { name: 'Provider', href: '/account/provider' },
+    // { name: 'Membership & Billing', href: '/account/membership-and-billing' },
   ],
 };
 

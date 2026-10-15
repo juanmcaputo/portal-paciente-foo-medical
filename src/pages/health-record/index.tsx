@@ -6,23 +6,25 @@ import type { JSX } from 'react';
 import { Outlet } from 'react-router';
 import { Loading } from '../../components/Loading';
 import { SideMenu } from '../../components/SideMenu';
-import { measurementsMeta } from './Measurement.data';
+// import { measurementsMeta } from './Measurement.data'; // MiniPACS: solo lo usaba Vitals, comentado abajo
 
 const sideMenu = {
-  title: 'Health Record',
+  title: 'Historial médico',
   menu: [
-    { name: 'Lab Results', href: '/health-record/lab-results' },
-    { name: 'Medications', href: '/health-record/medications' },
-    { name: 'Questionnaire Responses', href: '/health-record/questionnaire-responses' },
-    { name: 'Vaccines', href: '/health-record/vaccines' },
-    {
-      name: 'Vitals',
-      href: '/health-record/vitals',
-      subMenu: Object.values(measurementsMeta).map(({ title, id }) => ({
-        name: title,
-        href: `/health-record/vitals/${id}`,
-      })),
-    },
+    { name: 'Mis estudios', href: '/health-record/imaging-studies' },
+    // MiniPACS (etapa 1): en Health Record solo queda Imaging Studies
+    // { name: 'Lab Results', href: '/health-record/lab-results' },
+    // { name: 'Medications', href: '/health-record/medications' },
+    // { name: 'Questionnaire Responses', href: '/health-record/questionnaire-responses' },
+    // { name: 'Vaccines', href: '/health-record/vaccines' },
+    // {
+    //   name: 'Vitals',
+    //   href: '/health-record/vitals',
+    //   subMenu: Object.values(measurementsMeta).map(({ title, id }) => ({
+    //     name: title,
+    //     href: `/health-record/vitals/${id}`,
+    //   })),
+    // },
   ],
 };
 

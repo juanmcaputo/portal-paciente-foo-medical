@@ -69,7 +69,7 @@ const carouselItems = [
 const linkPages = [
   {
     img: HealthRecordImage,
-    title: 'Health Record',
+    title: 'Historial médico',
     description: '',
     href: '/health-record',
   },

@@ -36,6 +36,7 @@ const theme = createTheme({
   },
 });
 
+// <App /> --> Ya le dice que llame a App.tsx
 const root = createRoot(document.getElementById('root') as HTMLElement);
 root.render(
   <StrictMode>

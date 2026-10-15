@@ -3,7 +3,13 @@
 import { AppShell, Burger, Container, Group, Menu, UnstyledButton, useMantineTheme } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { ResourceAvatar, useMedplumProfile } from '@medplum/react';
-import { IconChevronDown, IconLink, IconLogout, IconSettings, IconUserCircle } from '@tabler/icons-react';
+import {
+  IconChevronDown,
+  // IconLink, // MiniPACS: solo lo usaba "SMART Health Links", comentado abajo
+  IconLogout,
+  // IconSettings, // MiniPACS: solo lo usaba "Settings", comentado abajo
+  IconUserCircle,
+} from '@tabler/icons-react';
 import cx from 'clsx';
 import { useState } from 'react';
 import type { JSX } from 'react';
@@ -12,10 +18,11 @@ import classes from './Header.module.css';
 import { Logo } from './Logo';
 
 const navigation = [
-  { name: 'Health Record', href: '/health-record' },
-  { name: 'Messages', href: '/Communication' },
-  { name: 'Care Plan', href: '/care-plan' },
-  { name: 'Get Care', href: '/get-care' },
+  { name: 'Historial médico', href: '/health-record' },
+  // MiniPACS (etapa 1): opciones que el paciente no usa; la politica de Medplum no le da esos recursos
+  // { name: 'Messages', href: '/Communication' },
+  // { name: 'Care Plan', href: '/care-plan' },
+  // { name: 'Get Care', href: '/get-care' },
 ];
 
 export function Header(): JSX.Element {
@@ -62,18 +69,22 @@ export function Header(): JSX.Element {
               >
                 Your profile
               </Menu.Item>
+              {/* MiniPACS (etapa 1): Settings llevaba al mismo perfil; no se usa
               <Menu.Item
                 leftSection={<IconSettings size={16} color={theme.colors.blue[6]} stroke={1.5} />}
                 onClick={() => navigate('/account/profile')?.catch(console.error)}
               >
                 Settings
               </Menu.Item>
+              */}
+              {/* MiniPACS (etapa 1): SMART Health Links no se usa
               <Menu.Item
                 leftSection={<IconLink size={16} color={theme.colors.teal[6]} stroke={1.5} />}
                 onClick={() => navigate('/smart-health-links')?.catch(console.error)}
               >
                 SMART Health Links
               </Menu.Item>
+              */}
               <Menu.Item
                 leftSection={<IconLogout size={16} color={theme.colors.gray[6]} stroke={1.5} />}
                 onClick={() => navigate('/signout')?.catch(console.error)}
