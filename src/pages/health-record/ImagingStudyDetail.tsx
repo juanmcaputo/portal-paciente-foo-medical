@@ -2,18 +2,46 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // MiniPACS (etapa 1): detalle de un ImagingStudy en lenguaje simple: estado, fecha, modalidades, cantidades, series
-// y el boton "Ver estudio", que abre la direccion del Endpoint del estudio (OHIF).
+// y el boton "Ver estudio".
 // Recibe patientId por propiedad y toma el studyId de la ruta; sirve para el paciente y el medico.
 // La seguridad la pone la politica de Medplum; el control de pertenencia de abajo es solo para la pantalla.
+//
+// "Ver estudio", con el servicio de pase (Documentacion/SERVICIO_PASE/SERVICIO_PASE.md):
+//   - paciente (MINIPACS_PASE_URL) o medico (MINIPACS_PASE_URL_MEDICO): pide al servicio un codigo de un solo uso
+//     (POST /pase con el token de Medplum y el StudyInstanceUID) y abre <puerta>/entrar?codigo=... : el visor se
+//     abre sin usuario ni contrasenia. El paciente ve solo ese estudio; el medico, el OHIF completo;
+//   - sin la variable de su perfil: abre la direccion del Endpoint del estudio (OHIF con login de Keycloak).
 import { Alert, Badge, Box, Button, Card, Divider, Group, SimpleGrid, Text, ThemeIcon, Title } from '@mantine/core';
 import type { Endpoint, ImagingStudy, ImagingStudySeries } from '@medplum/fhirtypes';
 import { useMedplum, useResource } from '@medplum/react';
 import { IconExternalLink, IconFileText, IconStack2 } from '@tabler/icons-react';
 import type { JSX } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 
 /** Zona del centro: la misma con la que el sincronizador arma las fechas (estudio.zona-horaria). */
 const ZONA_DEL_CENTRO = 'America/Argentina/Buenos_Aires';
+
+/** Puertas del servicio de pase (OHIF y servicio en el mismo origen), sin barra al final. Vacia: sin pase. */
+const PUERTA_PACIENTE: string = String(import.meta.env.MINIPACS_PASE_URL ?? '').replace(/\/+$/, '');
+const PUERTA_MEDICO: string = String(import.meta.env.MINIPACS_PASE_URL_MEDICO ?? '').replace(/\/+$/, '');
+
+/** Lo que muestra la pestania nueva mientras se pide el pase (tarda unos segundos). Texto fijo, sin datos. */
+function mostrarEspera(pestania: Window): void {
+  const doc = pestania.document;
+  doc.title = 'Abriendo el estudio...';
+  doc.body.style.cssText =
+    'margin:0;height:100vh;display:flex;align-items:center;justify-content:center;' +
+    'font-family:system-ui,sans-serif;background:#f8f9fa;color:#343a40';
+  doc.body.innerHTML =
+    '<style>@keyframes girar{to{transform:rotate(360deg)}}</style>' +
+    '<div style="text-align:center">' +
+    '<div style="width:40px;height:40px;margin:0 auto 1rem;border:4px solid #dee2e6;border-top-color:#228be6;' +
+    'border-radius:50%;animation:girar 1s linear infinite"></div>' +
+    '<p style="font-size:1.4rem;margin:0 0 .5rem">Abriendo el estudio...</p>' +
+    '<p style="margin:0;color:#868e96">Estamos preparando el visor. Puede tardar unos segundos.</p>' +
+    '</div>';
+}
 
 const ESTADOS: Record<string, { texto: string; color: string }> = {
   available: { texto: 'Disponible', color: 'green' },
@@ -52,6 +80,9 @@ export function ImagingStudyDetail({ patientId }: ImagingStudyDetailProps): JSX.
   // El Endpoint (visor OHIF) se lee aparte: si no se puede leer, el boton queda deshabilitado
   const visor = useResource<Endpoint>(study.endpoint?.[0]);
 
+  const [abriendo, setAbriendo] = useState(false);
+  const [error, setError] = useState<string>();
+
   // Verificar que el estudio pertenece al paciente
   const patientReference = `Patient/${patientId}`;
   const subjectReference = study.subject.reference;
@@ -62,6 +93,46 @@ export function ImagingStudyDetail({ patientId }: ImagingStudyDetailProps): JSX.
   const estado = ESTADOS[study.status] ?? ESTADOS.unknown;
   const modalidades = (study.modality ?? []).map((m) => m.code).filter((c): c is string => !!c);
   const series = study.series ?? [];
+
+  // Con servicio de pase: el boton pide un pase y abre el visor sin login (cada perfil por su puerta)
+  const perfil = medplum.getProfile()?.resourceType;
+  const puerta = perfil === 'Patient' ? PUERTA_PACIENTE : perfil === 'Practitioner' ? PUERTA_MEDICO : '';
+  const conPase = puerta !== '';
+  const uid = study.identifier?.find((i) => i.system === 'urn:dicom:uid')?.value?.replace(/^urn:oid:/, '');
+
+  async function verConPase(): Promise<void> {
+    // La pestania se abre en el mismo clic: si se abriera despues de pedir el pase, el navegador la bloquea
+    const pestania = window.open('', '_blank');
+    if (pestania) {
+      pestania.opener = null;
+      mostrarEspera(pestania);
+    }
+    setAbriendo(true);
+    setError(undefined);
+    try {
+      await medplum.refreshIfExpired();
+      const respuesta = await fetch(`${puerta}/pase`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${medplum.getAccessToken()}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estudio: uid }),
+      });
+      if (!respuesta.ok) {
+        throw new Error(`${respuesta.status} ${await respuesta.text()}`);
+      }
+      const { codigo } = (await respuesta.json()) as { codigo: string };
+      const destino = `${puerta}/entrar?codigo=${encodeURIComponent(codigo)}`;
+      if (pestania) {
+        pestania.location.href = destino;
+      } else {
+        window.location.href = destino;
+      }
+    } catch (e) {
+      pestania?.close();
+      setError(`No se pudo abrir el estudio (${e instanceof Error ? e.message : String(e)}). Proba de nuevo.`);
+    } finally {
+      setAbriendo(false);
+    }
+  }
 
   return (
     <Box p="xl">
@@ -107,17 +178,33 @@ export function ImagingStudyDetail({ patientId }: ImagingStudyDetailProps): JSX.
         )}
 
         <Group justify="flex-end" mt="xl">
-          <Button
-            component="a"
-            href={visor?.address}
-            target="_blank"
-            rel="noopener noreferrer"
-            leftSection={<IconExternalLink size={16} />}
-            disabled={!visor?.address}
-          >
-            Ver estudio
-          </Button>
+          {conPase ? (
+            <Button
+              onClick={() => void verConPase()}
+              loading={abriendo}
+              leftSection={<IconExternalLink size={16} />}
+              disabled={!uid}
+            >
+              Ver estudio
+            </Button>
+          ) : (
+            <Button
+              component="a"
+              href={visor?.address}
+              target="_blank"
+              rel="noopener noreferrer"
+              leftSection={<IconExternalLink size={16} />}
+              disabled={!visor?.address}
+            >
+              Ver estudio
+            </Button>
+          )}
         </Group>
+        {error && (
+          <Alert color="red" mt="md">
+            {error}
+          </Alert>
+        )}
       </Card>
     </Box>
   );

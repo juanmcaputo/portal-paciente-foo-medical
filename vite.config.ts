@@ -11,7 +11,8 @@ if (!existsSync(path.join(import.meta.dirname, '.env'))) {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  envPrefix: ['MEDPLUM_', 'GOOGLE_', 'RECAPTCHA_'],
+  // MINIPACS_: variables propias del portal MiniPACS (por ejemplo MINIPACS_PASE_URL, la puerta del servicio de pase)
+  envPrefix: ['MEDPLUM_', 'GOOGLE_', 'RECAPTCHA_', 'MINIPACS_'],
   plugins: [react()],
   server: {
     port: 3000,
